@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/shopspring/decimal"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -74,6 +75,9 @@ func startRPC() {
 	router.Use(cors())
 	g := router.Group("/api")
 	g.POST("/price", getPrice)
+	g.POST("/ticker/ask", getTickerAsk)
+	g.POST("/ticker/bid", getTickerBid)
+	g.POST("/pool", getPool)
 	//
 	httpServer = &http.Server{
 		Addr:    "127.0.0.1:8000",
@@ -105,11 +109,131 @@ type Price struct {
 }
 
 func getPrice(c *gin.Context) {
-	prices := make([]*Price, 0)
-	res := db.Find(&prices)
+	tickers := make([]*Ticker, 0)
+	tt := time.Now().Unix()
+	res := db.Where("time > ?", tt-24*60*60).Order("time asc").Find(&tickers)
 	if res.Error != nil {
 		c.JSON(500, res.Error)
 		return
 	}
+	prices := make([]*Price, 0)
+	currentTime := uint64(0)
+	for _, item := range tickers {
+		if item.Time == currentTime {
+			continue
+		}
+		currentTime = item.Time
+		prices = append(prices, &Price{
+			Time:  item.Time,
+			Open:  float32(item.BidPrice.Round(2).InexactFloat64()),
+			High:  float32(item.AskPrice.Round(2).InexactFloat64()),
+			Low:   float32(item.BidPrice.Round(2).InexactFloat64()),
+			Close: float32(item.AskPrice.Round(2).InexactFloat64()),
+		})
+	}
 	c.JSON(200, prices)
+}
+
+type Ticker struct {
+	Id          int64           `gorm:"primaryKey;autoIncrement" json:"-"`
+	Chain       string          `gorm:"type:varchar(32);not null" json:"chain"`
+	MarketId    string          `gorm:"type:varchar(32);not null" json:"market_id"`
+	SwapId      string          `gorm:"type:varchar(64);not null" json:"swap_id"`
+	CoinA       string          `gorm:"type:varchar(32);not null" json:"coin_a"`
+	CoinB       string          `gorm:"type:varchar(32);not null" json:"coin_b"`
+	BlockHeight uint64          `gorm:"type:bigint(20);not null" json:"block_height"`
+	Time        uint64          `gorm:"type:bigint(20);not null" json:"time"`
+	AskPrice    decimal.Decimal `gorm:"type:varchar(32);not null" json:"ask_price"`
+	BidPrice    decimal.Decimal `gorm:"type:varchar(32);not null" json:"bid_price"`
+}
+
+type TickerX struct {
+	Time  uint64  `gorm:"type:bigint(20);not null" json:"time"`
+	Value float32 `gorm:"type:varchar(32);not null" json:"value"`
+}
+
+func getTickerAsk(c *gin.Context) {
+	tickers := make([]*Ticker, 0)
+	tt := time.Now().Unix()
+	res := db.Where("time > ?", tt-24*60*60).Order("time asc").Find(&tickers)
+	if res.Error != nil {
+		c.JSON(500, res.Error)
+		return
+	}
+	tickerXs := make([]*TickerX, 0)
+	currentTime := uint64(0)
+	for _, item := range tickers {
+		if item.Time == currentTime {
+			continue
+		}
+		currentTime = item.Time
+		tickerXs = append(tickerXs, &TickerX{
+			Time:  item.Time,
+			Value: float32(item.AskPrice.Round(2).InexactFloat64()),
+		})
+	}
+	c.JSON(200, tickerXs)
+}
+
+func getTickerBid(c *gin.Context) {
+	tickers := make([]*Ticker, 0)
+	tt := time.Now().Unix()
+	res := db.Where("time > ?", tt-24*60*60).Order("time asc").Find(&tickers)
+	if res.Error != nil {
+		c.JSON(500, res.Error)
+		return
+	}
+	tickerXs := make([]*TickerX, 0)
+	currentTime := uint64(0)
+	for _, item := range tickers {
+		if item.Time == currentTime {
+			continue
+		}
+		currentTime = item.Time
+		tickerXs = append(tickerXs, &TickerX{
+			Time:  item.Time,
+			Value: float32(item.BidPrice.Round(2).InexactFloat64()),
+		})
+	}
+	c.JSON(200, tickerXs)
+}
+
+type Pool struct {
+	Id          int64           `gorm:"primaryKey;autoIncrement" json:"-"`
+	Chain       string          `gorm:"type:varchar(32);not null" json:"chain"`
+	MarketId    string          `gorm:"type:varchar(32);not null" json:"market_id"`
+	SwapId      string          `gorm:"type:varchar(64);not null" json:"swap_id"`
+	CoinA       string          `gorm:"type:varchar(32);not null" json:"coin_a"`
+	CoinB       string          `gorm:"type:varchar(32);not null" json:"coin_b"`
+	BlockHeight uint64          `gorm:"type:bigint(20);not null" json:"block_height"`
+	Time        uint64          `gorm:"type:bigint(20);not null" json:"time"`
+	Price       decimal.Decimal `gorm:"type:varchar(32);not null" json:"price"`
+}
+
+type PoolX struct {
+	Time  uint64  `gorm:"type:bigint(20);not null" json:"time"`
+	Value float32 `gorm:"type:varchar(32);not null" json:"value"`
+}
+
+func getPool(c *gin.Context) {
+	pools := make([]*Pool, 0)
+	tt := time.Now().Unix()
+	res := db.Where("time > ?", tt-24*60*60).Order("time asc").Find(&pools)
+	if res.Error != nil {
+		c.JSON(500, res.Error)
+		return
+	}
+	poolXs := make([]*PoolX, 0)
+	currentTime := uint64(0)
+	for _, item := range pools {
+		if item.Time == currentTime {
+			continue
+		}
+		currentTime = item.Time
+		poolXs = append(poolXs, &PoolX{
+			Time:  item.Time,
+			Value: float32(item.Price.Round(2).InexactFloat64()),
+		})
+	}
+	c.JSON(200, poolXs)
 }

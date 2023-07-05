@@ -23,6 +23,8 @@ function ChartComponent() {
             });
             chart.timeScale().fitContent();
 
+            //
+            /*
             const priceSeries = chart.addCandlestickSeries({
                 upColor: "#4bffb5",
                 downColor: "#ff4976",
@@ -35,7 +37,6 @@ function ChartComponent() {
 
             //
             //
-            var priceData1;
             fetch('http://127.0.0.1:8000/api/price', {
                 method: 'POST',
                 mode: 'cors',
@@ -51,9 +52,74 @@ function ChartComponent() {
                 priceData1 = json;
                 priceSeries.setData(priceData1);
             })
+            */
 
             //
             //priceSeries.setData(priceData);
+
+            //
+            const lineSeries = chart.addLineSeries({
+                color: '#26a69a',
+                priceScaleId: '',
+            });
+
+            fetch('http://127.0.0.1:8000/api/ticker/ask', {
+                method: 'POST',
+                mode: 'cors',
+                headers: {
+                    'Accept':'application/json',
+                    'Content-Type':'application/json'
+                },
+                body:JSON.stringify({})
+            })
+            .then(response => response.json())
+            .then(json => {
+                console.log(json)
+                lineSeries.setData(json);
+            })
+
+            //
+            const lineSeries2 = chart.addLineSeries({
+                color: '#ef5350',
+                priceScaleId: '',
+            });
+
+            fetch('http://127.0.0.1:8000/api/ticker/bid', {
+                method: 'POST',
+                mode: 'cors',
+                headers: {
+                    'Accept':'application/json',
+                    'Content-Type':'application/json'
+                },
+                body:JSON.stringify({})
+            })
+            .then(response => response.json())
+            .then(json => {
+                console.log(json)
+                lineSeries2.setData(json);
+            })
+            
+
+            //
+            const lineSeries3 = chart.addLineSeries({
+                color: '#838ca1',
+                priceScaleId: '',
+            });
+
+            fetch('http://127.0.0.1:8000/api/pool', {
+                method: 'POST',
+                mode: 'cors',
+                headers: {
+                    'Accept':'application/json',
+                    'Content-Type':'application/json'
+                },
+                body:JSON.stringify({})
+            })
+            .then(response => response.json())
+            .then(json => {
+                console.log(json)
+                lineSeries3.setData(json);
+            })
             
             window.addEventListener('resize', handleResize);
 
